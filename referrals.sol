@@ -150,22 +150,25 @@ abstract contract Referral is Wallet, PriceConsumerV3, ERC777 {
         return listParents;
     }
 
-    function purchase(address _referer, string memory username) isActive isVaildReferer( _referer ) payable public returns (bool)
+    function purchase(address _referer, string memory username, uint256 tokens) isActive isVaildReferer( _referer ) payable public returns (bool)
     {
         require(_referer!=msg.sender,"Address must differs of your");
         require(bytes(username).length<=20 && bytes(username).length>0);
         int256 count=1;
+        //Condition on the number of tokens
+        uint256 tokenswei18=tokens*1e18;
+        require(tokenswei18>=100*1e18,"Minimum 100 tokens to buy");
+        require((tokenswei18+total_tokens_sold)<=Max_tokens_sold,"Sold out");
+        //Condition on the quantity of bnb sent
         uint256 lastPrice=uint256(getLatestPriceWei18());
         uint256 value_usd=(msg.value*lastPrice)/1e18;
-        require(value_usd>=minimum_buy_usd,"Must exceed the minimum to buy");
-        //1 token = 0,10 USD
-        uint256 tokens=value_usd*10;
-        require((tokens+total_tokens_sold)<Max_tokens_sold,"Sold out");
+        require(value_usd>=minimum_buy_usd,"Minimum 10$ to buy");
+
         address Parent=_referer;
         uint256 countdown=100;
 
-        _send(_owner, msg.sender, tokens, "","", false);
-        total_tokens_sold=total_tokens_sold+tokens;
+        _send(_owner, msg.sender, tokenswei18, "","", false);
+        total_tokens_sold=total_tokens_sold+tokenswei18;
         
         while(count <= max_levels && Parent != address(0)){
             payable(Parent).transfer(msg.value*Levels[count]/100);
